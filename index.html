@@ -10,8 +10,8 @@
 #bgVideo{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;filter:brightness(.85) contrast(1.02)}
 .colorShift{position:fixed;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(120deg,var(--grad1),var(--grad2),var(--grad3));background-size:400% 400%;mix-blend-mode:overlay;opacity:.65;animation:colorShift 18s ease infinite}
 @keyframes colorShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font-family:"DM Sans",sans-serif;overflow-x:hidden}button{font:inherit}
-section{min-height:100vh;position:relative;padding:7rem 7vw;display:flex;align-items:center;justify-content:center;overflow:hidden}.paper{max-width:1120px;width:100%}.center{text-align:center}.center p{margin-left:auto;margin-right:auto}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font-family:"DM Sans",sans-serif;overflow-x:hidden;scroll-snap-type:y mandatory;scroll-behavior:smooth}button{font:inherit}
+section{min-height:100vh;position:relative;padding:7rem 7vw;display:flex;align-items:center;justify-content:center;overflow:hidden;scroll-snap-align:start;scroll-snap-stop:always}.paper{max-width:1120px;width:100%}.center{text-align:center}.center p{margin-left:auto;margin-right:auto}
 h1,h2,h3{font-family:"Playfair Display",serif;font-weight:500;line-height:1.05}h1{font-size:clamp(3.4rem,8vw,7.4rem);margin:.5rem 0 1rem}h2{font-size:clamp(2.5rem,5vw,5rem);margin:.4rem 0 1rem}p{line-height:1.75;font-size:1.04rem;max-width:700px}.kicker{font-family:Caveat;font-size:1.7rem;color:var(--rose);display:inline-block;transform:rotate(-2deg)}.hand{font-family:Caveat;font-size:1.55rem}
 #progress{position:fixed;left:0;top:0;height:4px;background:var(--rose);z-index:100;width:0}#musicToggle{position:fixed;right:18px;top:18px;z-index:101;border:1px solid #ffffffaa;background:#fff8;padding:11px 14px;border-radius:999px;backdrop-filter:blur(10px);cursor:pointer;box-shadow:0 8px 25px #0001}
 .hero{background:transparent}.floatFlower{position:absolute;font-size:clamp(2rem,5vw,4rem);animation:float 6s ease-in-out infinite}.floatFlower:nth-child(1){left:9%;top:22%}.floatFlower:nth-child(2){right:12%;top:34%;animation-delay:1s}.floatFlower:nth-child(3){left:20%;bottom:13%;animation-delay:2s}.floatFlower:nth-child(4){right:23%;bottom:18%;animation-delay:3s}@keyframes float{50%{transform:translateY(-15px) rotate(8deg)}}
@@ -134,5 +134,45 @@ document.getElementById('stormBtn').onclick=()=>document.getElementById('angerMe
 document.getElementById('door').onclick=()=>document.querySelector('.cafe').scrollIntoView({behavior:'smooth'});
 function confetti(){for(let i=0;i<28;i++){let s=document.createElement('span');s.className='confetti';s.textContent=['🌷','🌸','✨','💗','🌼'][i%5];s.style.left=(50+Math.random()*18-9)+'vw';s.style.top=(48+Math.random()*10-5)+'vh';s.style.setProperty('--x',(Math.random()*500-250)+'px');s.style.setProperty('--y',(Math.random()*500-250)+'px');document.body.appendChild(s);setTimeout(()=>s.remove(),3000)}}
 document.getElementById('secretBtn').onclick=()=>{document.getElementById('secretText').innerHTML='<b>ACCESS GRANTED.</b><br><br>She is officially authorized to dance in the kitchen, order dessert first, buy flowers for absolutely no reason, and be dramatically angry for exactly 7 minutes. After that: mandatory hug. 🌷';document.getElementById('lock').textContent='🔓';confetti()};
+// Pause/play hero background video based on visibility and enable snap-friendly behavior
+const bg = document.getElementById('bgVideo');
+const heroSection = document.querySelector('.hero');
+if(bg && heroSection){
+  const heroObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if(e.isIntersecting){
+        // when hero becomes visible, play video (muted unless user allowed sound)
+        try{ bg.play().catch(()=>{}); }catch(err){}
+      } else {
+        // when leaving hero, pause video to avoid background playback
+        try{ bg.pause(); }catch(err){}
+      }
+    });
+  },{threshold:0.55});
+  heroObs.observe(heroSection);
+}
+
+// Optional: enforce discrete section jumps on wheel/keyboard for a snap-like feel
+(function(){
+  let ticking = false;
+  function findNextSection(delta){
+    const sections = Array.from(document.querySelectorAll('section'));
+    const currentIndex = sections.findIndex(s=>s.getBoundingClientRect().top >= -10 && s.getBoundingClientRect().top < window.innerHeight/2);
+    if(delta>0){ // scroll down
+      return sections[Math.min(sections.length-1, (currentIndex<0?0:currentIndex)+1)];
+    } else { // scroll up
+      return sections[Math.max(0, (currentIndex<0?0:currentIndex)-1)];
+    }
+  }
+  window.addEventListener('wheel', (e)=>{
+    if(Math.abs(e.deltaY) < 30) return; // ignore tiny scrolls
+    if(ticking) return;
+    ticking = true;
+    const target = findNextSection(e.deltaY);
+    if(target){ target.scrollIntoView({behavior:'smooth'}); }
+    setTimeout(()=>{ ticking=false; }, 600);
+  },{passive:true});
+})();
+
 </script>
 </body></html>
